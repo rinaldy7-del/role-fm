@@ -17,7 +17,7 @@ def load_database():
 
 df_raw = load_database()
 
-# --- DATABASE SELURUH ROLE (GABUNGAN LENGKAP & META) ---
+# --- DATABASE SELURUH ROLE (GABUNGAN LENGKAP) ---
 ROLES = {
     # 🧤 GOALKEEPERS
     "🧤 GK: Goalkeeper (Defend)": {"pos_key": ["GK"], "core": ['Ref', '1v1', 'Han', 'Pos', 'Cnt'], "important": ['Aer', 'Cmd', 'Dec'], "standard": ['Kic', 'Com']},
@@ -113,33 +113,44 @@ def calculate_role_score(row, role_name):
     return round(base_norm * pos_multiplier * (1 + hidden_pct), 2)
 
 # --- UI STREAMLIT ---
-st.title("🏆 FM24 Ultimate Role Calculator")
+st.title("🏆 FM24 Master Meta Calculator")
 
 if df_raw is not None:
     st.sidebar.header("Taktik & Filter")
-    selected_role = st.sidebar.selectbox("Pilih Role (Total 50+ Role)", list(ROLES.keys()))
-    min_ca = st.sidebar.slider("Minimal Ability (Internal Filter)", 0, 200, 130)
+    selected_role = st.sidebar.selectbox("Pilih Role", list(ROLES.keys()))
+    min_ca = st.sidebar.slider("Minimal Ability (CA Filter)", 0, 200, 130)
     search_q = st.sidebar.text_input("Cari Nama Pemain")
 
+    # 1. Jalankan Kalkulasi Score
     df_calc = df_raw.copy()
     df_calc['Score'] = df_calc.apply(lambda r: calculate_role_score(r, selected_role), axis=1)
+    
+    # 2. Filter CA dan Urutkan
     res = df_calc[df_calc['CA'] >= min_ca].sort_values(by='Score', ascending=False)
-    if search_q: res = res[res['Name'].str.contains(search_q, case=False)]
-
-    # --- TAMBAHKAN KOLOM NOMOR ---
+    
+    # 3. TETAPKAN NOMOR URUT SEBELUM FILTER NAMA (PENTING!)
     res = res.reset_index(drop=True)
     res['No'] = res.index + 1
+    
+    # 4. Baru jalankan Filter Nama
+    if search_q: 
+        res = res[res['Name'].str.contains(search_q, case=False)]
 
+    # Dashboard Highlights
     if not res.empty:
         st.subheader(f"Top Recommendation: {selected_role}")
         c1, c2, c3 = st.columns(3)
-        c1.metric("🥇 Rank 1", res.iloc[0]['Name'], f"{res.iloc[0]['Score']}%")
-        if len(res) > 1: c2.metric("🥈 Rank 2", res.iloc[1]['Name'], f"{res.iloc[1]['Score']}%")
-        if len(res) > 2: c3.metric("🥉 Rank 3", res.iloc[2]['Name'], f"{res.iloc[2]['Score']}%")
+        # Menampilkan top 3 asli dari list (indeks 0, 1, 2 sebelum filter nama)
+        # Namun agar konsisten, kita ambil dari data yang terfilter jika masih ada
+        top_list = df_calc[df_calc['CA'] >= min_ca].sort_values(by='Score', ascending=False).head(3)
+        c1.metric("🥇 Rank 1", top_list.iloc[0]['Name'], f"{top_list.iloc[0]['Score']}%")
+        if len(top_list) > 1: c2.metric("🥈 Rank 2", top_list.iloc[1]['Name'], f"{top_list.iloc[1]['Score']}%")
+        if len(top_list) > 2: c3.metric("🥉 Rank 3", top_list.iloc[2]['Name'], f"{top_list.iloc[2]['Score']}%")
 
     st.divider()
-    # Tampilkan tabel dengan kolom 'No' di depan
-    display_cols = ['No', 'Name', 'Position', 'Score', 'PA', 'Cons', 'Imp M']
+    
+    # Menampilkan tabel (CA muncul kembali)
+    display_cols = ['No', 'Name', 'Position', 'Score', 'CA', 'PA', 'Cons', 'Imp M']
     st.dataframe(res[display_cols], use_container_width=True, hide_index=True)
 else:
     st.error("File 'database.xlsx' tidak ditemukan di GitHub!")
