@@ -4,6 +4,7 @@ import os
 
 # Konfigurasi Halaman
 st.set_page_config(page_title="FM24 Master Meta Calculator", layout="wide")
+st.set_page_config(page_title="3 Coach Terbaik (Str1x, Danwill, Verdy) dan Curutnya (Ahmad Bajuri)", layout="wide")
 
 @st.cache_data
 def load_database():
@@ -140,3 +141,4 @@ if df_raw is not None:
     st.dataframe(res[['Name', 'Position', 'Score', 'PA', 'Cons', 'Imp M']], use_container_width=True, hide_index=True)
 else:
     st.error("File 'database.xlsx' tidak ditemukan di GitHub!")
+
