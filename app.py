@@ -4,7 +4,6 @@ import os
 
 # Konfigurasi Halaman
 st.set_page_config(page_title="FM24 Master Meta Calculator", layout="wide")
-st.set_page_config(page_title="3 Coach Terbaik (Str1x, Danwill, Verdy) dan Curutnya (Ahmad Bajuri)", layout="wide")
 
 @st.cache_data
 def load_database():
@@ -18,7 +17,7 @@ def load_database():
 
 df_raw = load_database()
 
-# --- DATABASE SELURUH ROLE (GABUNGAN LENGKAP) ---
+# --- DATABASE SELURUH ROLE (GABUNGAN LENGKAP & META) ---
 ROLES = {
     # 🧤 GOALKEEPERS
     "🧤 GK: Goalkeeper (Defend)": {"pos_key": ["GK"], "core": ['Ref', '1v1', 'Han', 'Pos', 'Cnt'], "important": ['Aer', 'Cmd', 'Dec'], "standard": ['Kic', 'Com']},
@@ -56,7 +55,7 @@ ROLES = {
     "⚙ CM: Central Midfielder (Defend)": {"pos_key": ["M (C)"], "core": ['Pos', 'Tck', 'Dec', 'Tea', 'Sta', 'Acc'], "important": ['Pac', 'Ant', 'Wor', 'Pas', 'Cnt'], "standard": ['Str', 'Cmp', 'Mar']},
     "⚙ CM: Central Midfielder (Support)": {"pos_key": ["M (C)"], "core": ['Pas', 'Dec', 'Tea', 'Sta', 'Acc'], "important": ['Vis', 'Fir', 'Wor', 'Ant', 'Pac'], "standard": ['OtB', 'Cmp', 'Tck', 'Tec']},
     "⚙ CM: Central Midfielder (Attack)": {"pos_key": ["M (C)"], "core": ['Acc', 'OtB', 'Sta', 'Pas', 'Dec', 'Cmp'], "important": ['Pac', 'Tec', 'Fir', 'Ant'], "standard": ['Fin', 'Lon', 'Dri', 'Vis']},
-    "⚙ CM: Box to Box": {"pos_key": ["M (C)", "DM"], "core": ['Sta', 'Wor', 'Acc', 'Ant', 'OtB', 'Pac'], "important": ['Pas', 'Tck', 'Dec', 'Str', 'Tea'], "standard": ['Fin', 'Lon', 'Cmp', 'Fir']},
+    "⚙ CM: Box to Box": {"pos_key": ["M (C)", "DM"], "core": ['Sta', 'Wor', 'Acc', 'Pac', 'Tea', 'OtB'], "important": ['Pas', 'Tck', 'Dec', 'Ant', 'Str'], "standard": ['Fin', 'Lon', 'Cmp', 'Fir']},
     "⚙ CM: Ball Winning Midfielder": {"pos_key": ["M (C)", "DM"], "core": ['Tck', 'Agg', 'Wor', 'Acc', 'Sta'], "important": ['Ant', 'Str', 'Pos'], "standard": ['Pas', 'Dec']},
     "⚙ CM: Mezzala (Attack)": {"pos_key": ["M (C)"], "core": ['Acc', 'OtB', 'Dri', 'Tec', 'Sta'], "important": ['Pas', 'Vis', 'Dec', 'Pac'], "standard": ['Fin', 'Lon', 'Fir']},
     "⚙ CAR: Carrilero (Support)": {"pos_key": ["M (C)"], "core": ['Sta', 'Wor', 'Tea', 'Pos', 'Acc', 'Pas'], "important": ['Pac', 'Dec', 'Ant', 'Tck'], "standard": ['Fir', 'Tec', 'Cnt', 'Mar']},
@@ -81,7 +80,9 @@ ROLES = {
 
     # ⚽ STRIKER ROLES
     "⚽ ST: Advanced Forward": {"pos_key": ["ST (C)"], "core": ['Acc', 'Pac', 'OtB', 'Fin', 'Cmp', 'Ant'], "important": ['Fir', 'Dec'], "standard": ['Dri', 'Tec']},
-    "⚽ ST: Pressing Forward (Attack)": {"pos_key": ["ST (C)"], "core": ['Acc', 'Wor', 'Sta', 'OtB', 'Fin'], "important": ['Pac', 'Agg', 'Ant'], "standard": ['Str', 'Fir']},
+    "⚽ ST: Pressing Forward (Defend)": {"pos_key": ["ST (C)"], "core": ['Wor', 'Sta', 'Acc', 'Tea', 'Agg'], "important": ['Pac', 'Ant', 'Str', 'OtB'], "standard": ['Fin', 'Fir', 'Dec']},
+    "⚽ ST: Pressing Forward (Support)": {"pos_key": ["ST (C)"], "core": ['Wor', 'Sta', 'Acc', 'Tea', 'OtB'], "important": ['Pac', 'Fir', 'Str', 'Ant'], "standard": ['Pas', 'Fin', 'Dec']},
+    "⚽ ST: Pressing Forward (Attack)": {"pos_key": ["ST (C)"], "core": ['Acc', 'Pac', 'Wor', 'Sta', 'OtB', 'Fin'], "important": ['Ant', 'Str', 'Agg', 'Cmp'], "standard": ['Fir', 'Dec']},
     "⚽ ST: Complete Forward (Support)": {"pos_key": ["ST (C)"], "core": ['Acc', 'Pac', 'Fin', 'Fir', 'Pas', 'Str', 'Cmp'], "important": ['Tec', 'Hea', 'OtB', 'Dec', 'Ant'], "standard": ['Dri', 'Jum', 'Tea', 'Sta']},
     "⚽ ST: Complete Forward (Attack)": {"pos_key": ["ST (C)"], "core": ['Acc', 'OtB', 'Fin', 'Cmp', 'Str', 'Pac'], "important": ['Fir', 'Tec', 'Hea', 'Ant'], "standard": ['Pas', 'Dri', 'Jum', 'Sta']},
     "⚽ ST: Target Forward (Support)": {"pos_key": ["ST (C)"], "core": ['Str', 'Jum', 'Hea', 'Fir', 'Bra'], "important": ['Tea', 'OtB', 'Cmp', 'Acc'], "standard": ['Pas', 'Fin', 'Ant', 'Bal']},
@@ -94,12 +95,10 @@ ROLES = {
 
 def calculate_role_score(row, role_name):
     cfg = ROLES[role_name]
-    # 1. Penalty Posisi
     player_pos = str(row['Position'])
     is_compatible = any(key in player_pos for key in cfg['pos_key'])
     pos_multiplier = 1.0 if is_compatible else 0.3
     
-    # 2. Rumus Hitung (5-3-2)
     s_core = sum(row[a] for a in cfg['core'] if a in row) * 5
     s_imp = sum(row[a] for a in cfg['important'] if a in row) * 3
     s_std = sum(row[a] for a in cfg['standard'] if a in row) * 2
@@ -107,7 +106,6 @@ def calculate_role_score(row, role_name):
     max_score = (len(cfg['core']) * 20 * 5) + (len(cfg['important']) * 20 * 3) + (len(cfg['standard']) * 20 * 2)
     base_norm = (s_core + s_imp + s_std) / max_score * 100
     
-    # 3. Hidden Modifier (Clamp 10%)
     dev_cons, dev_imp = row['Cons'] - 10, row['Imp M'] - 10
     hidden_pct = (dev_cons * 0.008) + (dev_imp * 0.005)
     hidden_pct = max(-0.10, min(0.10, hidden_pct))
@@ -116,20 +114,21 @@ def calculate_role_score(row, role_name):
 
 # --- UI STREAMLIT ---
 st.title("🏆 FM24 Ultimate Role Calculator")
-st.markdown("3 Kuch Terbaik = Str1x, Danwill dan Verdy")
-st.markdown("Kuch Curut = Rinaldy")
-st.markdown("Database: **database.xlsx** | Logic: **Meta Versatile (x5, x3, x2)**")
 
 if df_raw is not None:
     st.sidebar.header("Taktik & Filter")
     selected_role = st.sidebar.selectbox("Pilih Role (Total 50+ Role)", list(ROLES.keys()))
-    min_ca = st.sidebar.slider("Minimal Ability (CA Filter)", 0, 200, 130)
+    min_ca = st.sidebar.slider("Minimal Ability (Internal Filter)", 0, 200, 130)
     search_q = st.sidebar.text_input("Cari Nama Pemain")
 
     df_calc = df_raw.copy()
     df_calc['Score'] = df_calc.apply(lambda r: calculate_role_score(r, selected_role), axis=1)
     res = df_calc[df_calc['CA'] >= min_ca].sort_values(by='Score', ascending=False)
     if search_q: res = res[res['Name'].str.contains(search_q, case=False)]
+
+    # --- TAMBAHKAN KOLOM NOMOR ---
+    res = res.reset_index(drop=True)
+    res['No'] = res.index + 1
 
     if not res.empty:
         st.subheader(f"Top Recommendation: {selected_role}")
@@ -139,7 +138,8 @@ if df_raw is not None:
         if len(res) > 2: c3.metric("🥉 Rank 3", res.iloc[2]['Name'], f"{res.iloc[2]['Score']}%")
 
     st.divider()
-    # Tampilkan tabel (Tanpa kolom CA)
-    st.dataframe(res[['Name', 'Position', 'Score', 'PA', 'Cons', 'Imp M']], use_container_width=True, hide_index=True)
+    # Tampilkan tabel dengan kolom 'No' di depan
+    display_cols = ['No', 'Name', 'Position', 'Score', 'PA', 'Cons', 'Imp M']
+    st.dataframe(res[display_cols], use_container_width=True, hide_index=True)
 else:
     st.error("File 'database.xlsx' tidak ditemukan di GitHub!")
