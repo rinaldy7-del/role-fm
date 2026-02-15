@@ -116,8 +116,8 @@ def calculate_role_score(row, role_name):
 
 # --- UI STREAMLIT ---
 st.title("🏆 FM24 Ultimate Role Calculator")
-st.title("3 Kuch Terbaik = Str1x, Danwill dan Verdy")
-st.title("Kuch Curut = Rinaldy")
+st.markdown("3 Kuch Terbaik = Str1x, Danwill dan Verdy")
+st.markdown("Kuch Curut = Rinaldy")
 st.markdown("Database: **database.xlsx** | Logic: **Meta Versatile (x5, x3, x2)**")
 
 if df_raw is not None:
@@ -143,5 +143,6 @@ if df_raw is not None:
     st.dataframe(res[['Name', 'Position', 'Score', 'PA', 'Cons', 'Imp M']], use_container_width=True, hide_index=True)
 else:
     st.error("File 'database.xlsx' tidak ditemukan di GitHub!")
+
 
 
