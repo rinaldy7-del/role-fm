@@ -7,7 +7,7 @@ st.set_page_config(page_title="FM24 Master Meta Calculator", layout="wide")
 
 @st.cache_data
 def load_database():
-    file_name = "database.xlsx"
+    file_name = "db.xlsx"
     if os.path.exists(file_name):
         try:
             return pd.read_excel(file_name)
@@ -207,4 +207,4 @@ if df_raw is not None:
         if len(top3) > 2: c3.metric("🥉 Rank 3", top3.iloc[2]['Name'], f"{top3.iloc[2]['Score']}%")
 
 else:
-    st.error("File 'database.xlsx' tidak ditemukan di GitHub!")
+    st.error("File 'db.xlsx' tidak ditemukan di GitHub!")
