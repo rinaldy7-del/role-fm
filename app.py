@@ -8,18 +8,24 @@ st.set_page_config(page_title="FM24 Master Role Calculator", layout="wide")
 # --- DATABASE ENGINE ---
 @st.cache_data
 def load_database():
-    # Mencari file database di direktori yang sama
-    possible_files = ["database.xlsx - Sheet1.csv", "database.xlsx"]
-    for file in possible_files:
-        if os.path.exists(file):
-            if file.endswith('.csv'): return pd.read_csv(file)
-            else: return pd.read_excel(file)
+    # Nama file baru sesuai yang Anda ubah
+    file_name = "database.xlsx"
+    
+    if os.path.exists(file_name):
+        try:
+            return pd.read_excel(file_name)
+        except Exception as e:
+            # Jika excel error, coba baca sebagai CSV (jaga-jaga jika format tertukar)
+            try:
+                return pd.read_csv(file_name)
+            except:
+                st.error(f"Gagal membaca file: {e}")
+                return None
     return None
 
 df_raw = load_database()
 
 # --- DEFINISI SEMUA ROLE (GLOBAL META RULE) ---
-# Mapping atribut ke nama kolom CSV
 ROLES = {
     "🧤 GK: Goalkeeper (Defend)": {
         "core": ['Ref', '1v1', 'Han', 'Pos', 'Cnt'],
@@ -163,80 +169,51 @@ ROLES = {
     }
 }
 
-# --- ENGINE KALKULASI ---
 def calculate_role_score(row, role_name):
     cfg = ROLES[role_name]
-    
-    # 1. Base Score (Koefisien x5, x3, x2)
     s_core = sum(row[a] for a in cfg['core']) * 5
     s_imp = sum(row[a] for a in cfg['important']) * 3
     s_std = sum(row[a] for a in cfg['standard']) * 2
     
     current_score = s_core + s_imp + s_std
-    
-    # 2. Normalisasi Max Score (Semua atribut dianggap 20)
     max_score = (len(cfg['core']) * 20 * 5) + (len(cfg['important']) * 20 * 3) + (len(cfg['standard']) * 20 * 2)
     base_norm = (current_score / max_score) * 100
     
-    # 3. Hidden Modifier (Cons & Imp M)
-    # Deviasi dari 10
     dev_cons = row['Cons'] - 10
     dev_imp = row['Imp M'] - 10
-    
-    # Hidden % (±0.8% per poin Cons, ±0.5% per poin Imp M)
     hidden_pct = (dev_cons * 0.008) + (dev_imp * 0.005)
-    hidden_pct = max(-0.10, min(0.10, hidden_pct)) # Clamp ±10%
+    hidden_pct = max(-0.10, min(0.10, hidden_pct))
     
     final_score = base_norm * (1 + hidden_pct)
     return round(final_score, 2)
 
 # --- UI TAMPILAN ---
 st.title("🏆 FM24 Pro Role Calculator")
-st.markdown("Database: **database** | Filosofi: **Meta Versatile (x5, x3, x2)**")
 
 if df_raw is not None:
-    # Sidebar Filter
     st.sidebar.header("Konfigurasi")
     selected_role = st.sidebar.selectbox("Pilih Role Pemain", list(ROLES.keys()))
-    
     min_ca = st.sidebar.slider("Minimal Current Ability (CA)", 0, 200, 140)
     search_query = st.sidebar.text_input("Cari Nama Pemain")
 
-    # Jalankan Kalkulasi
     df_calc = df_raw.copy()
     df_calc['Score'] = df_calc.apply(lambda r: calculate_role_score(r, selected_role), axis=1)
     
-    # Filter & Sort
     res = df_calc[df_calc['CA'] >= min_ca]
     if search_query:
         res = res[res['Name'].str.contains(search_query, case=False)]
     
     res = res.sort_values(by='Score', ascending=False)
 
-    # Dashboard Atas
     if not res.empty:
         c1, c2, c3 = st.columns(3)
-        top1 = res.iloc[0]
-        c1.metric("🥇 Best Fit", top1['Name'], f"{top1['Score']}%")
+        c1.metric("🥇 Best Fit", res.iloc[0]['Name'], f"{res.iloc[0]['Score']}%")
         if len(res) > 1:
-            top2 = res.iloc[1]
-            c2.metric("🥈 Second Best", top2['Name'], f"{top2['Score']}%")
+            c2.metric("🥈 Second Best", res.iloc[1]['Name'], f"{res.iloc[1]['Score']}%")
         if len(res) > 2:
-            top3 = res.iloc[2]
-            c3.metric("🥉 Third Best", top3['Name'], f"{top3['Score']}%")
+            c3.metric("🥉 Third Best", res.iloc[2]['Name'], f"{res.iloc[2]['Score']}%")
 
     st.divider()
-
-    # Tabel Utama
-    st.dataframe(
-        res[['Name', 'Position', 'Score', 'CA', 'PA', 'Cons', 'Imp M']],
-        use_container_width=True,
-        hide_index=True
-    )
-    
-    # Tombol Download
-    csv = res.to_csv(index=False).encode('utf-8')
-    st.download_button("Download Hasil Kalkulasi (.csv)", csv, f"FM24_{selected_role}.csv", "text/csv")
-
+    st.dataframe(res[['Name', 'Position', 'Score', 'CA', 'PA', 'Cons', 'Imp M']], use_container_width=True, hide_index=True)
 else:
-    st.error("Database 'database.xlsx' tidak ditemukan! Pastikan file berada di folder yang sama dengan app.py.")
+    st.error("Database 'database.xlsx' tidak ditemukan! Pastikan file tersebut sudah di-upload ke GitHub dengan nama yang persis sama.")
