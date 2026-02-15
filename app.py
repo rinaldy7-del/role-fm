@@ -123,4 +123,113 @@ ROLES = {
     "🎯 AMC: Advanced Playmaker (Attack)": {
         "pos_key": ["AM (C)", "M (C)"],
         "core": ['Pas', 'Vis', 'Tec', 'Dec', 'Cmp'],
-        "important": ['
+        "important": ['Acc', 'OtB'],
+        "standard": ['Dri', 'Lon']
+    },
+    # WINGERS
+    "🪽 WING: Winger (Attack)": {
+        "pos_key": ["AM (RL)", "M (RL)"],
+        "core": ['Acc', 'Pac', 'Dri', 'Cro', 'OtB'],
+        "important": ['Tec', 'Dec'],
+        "standard": ['Fin', 'Fir']
+    },
+    "🪽 WING: Inside Forward (Attack)": {
+        "pos_key": ["AM (RL)"],
+        "core": ['Acc', 'Pac', 'Fin', 'OtB', 'Dri'],
+        "important": ['Cmp', 'Ant'],
+        "standard": ['Tec', 'Fir']
+    },
+    "🪽 WING: Inverted Winger (Attack)": {
+        "pos_key": ["AM (RL)", "M (RL)"],
+        "core": ['Acc', 'Pac', 'Dri', 'Tec', 'OtB'],
+        "important": ['Pas', 'Dec'],
+        "standard": ['Fin', 'Lon']
+    },
+    "🪽 WING: Raumdeuter": {
+        "pos_key": ["AM (L)", "AM (R)"],
+        "core": ['Acc', 'OtB', 'Ant', 'Fin'],
+        "important": ['Pac', 'Cmp'],
+        "standard": ['Fir']
+    },
+    # STRIKERS
+    "⚽ ST: Advanced Forward": {
+        "pos_key": ["ST (C)"],
+        "core": ['Acc', 'Pac', 'OtB', 'Fin', 'Cmp', 'Ant'],
+        "important": ['Fir', 'Dec'],
+        "standard": ['Dri', 'Tec']
+    },
+    "⚽ ST: Pressing Forward (Attack)": {
+        "pos_key": ["ST (C)"],
+        "core": ['Acc', 'Wor', 'Sta', 'OtB', 'Fin'],
+        "important": ['Pac', 'Agg', 'Ant'],
+        "standard": ['Str', 'Fir']
+    },
+    "⚽ ST: Complete Forward": {
+        "pos_key": ["ST (C)"],
+        "core": ['Acc', 'OtB', 'Fin', 'Cmp', 'Str'],
+        "important": ['Pac', 'Fir', 'Hea'],
+        "standard": ['Tec', 'Pas']
+    },
+    "⚽ ST: Target Forward": {
+        "pos_key": ["ST (C)"],
+        "core": ['Str', 'Jum', 'Hea', 'Bra'],
+        "important": ['Fin', 'OtB', 'Acc'],
+        "standard": ['Cmp', 'Ant']
+    },
+    "⚽ ST: Poacher": {
+        "pos_key": ["ST (C)"],
+        "core": ['Acc', 'OtB', 'Fin', 'Ant'],
+        "important": ['Pac', 'Cmp'],
+        "standard": ['Fir']
+    }
+}
+
+def calculate_role_score(row, role_name):
+    cfg = ROLES[role_name]
+    
+    # 1. POSITION PENALTY (Logic Baru)
+    player_pos = str(row['Position'])
+    is_compatible = any(key in player_pos for key in cfg['pos_key'])
+    pos_multiplier = 1.0 if is_compatible else 0.3 # Penalti 70% jika tidak cocok
+    
+    # 2. ATTRIBUTE SCORE (x5, x3, x2)
+    s_core = sum(row[a] for a in cfg['core']) * 5
+    s_imp = sum(row[a] for a in cfg['important']) * 3
+    s_std = sum(row[a] for a in cfg['standard']) * 2
+    
+    current_score = s_core + s_imp + s_std
+    max_score = (len(cfg['core']) * 20 * 5) + (len(cfg['important']) * 20 * 3) + (len(cfg['standard']) * 20 * 2)
+    base_norm = (current_score / max_score) * 100
+    
+    # 3. HIDDEN MODIFIER
+    dev_cons = row['Cons'] - 10
+    dev_imp = row['Imp M'] - 10
+    hidden_pct = (dev_cons * 0.008) + (dev_imp * 0.005)
+    hidden_pct = max(-0.10, min(0.10, hidden_pct))
+    
+    # 4. FINAL ASSEMBLY
+    final_score = base_norm * pos_multiplier * (1 + hidden_pct)
+    return round(final_score, 2)
+
+# --- UI ---
+st.title("🏆 FM24 Meta Role Calculator")
+st.info("Pemain di luar posisi natural akan menerima penalti skor yang signifikan.")
+
+if df_raw is not None:
+    st.sidebar.header("Taktik & Filter")
+    selected_role = st.sidebar.selectbox("Pilih Role", list(ROLES.keys()))
+    min_ca = st.sidebar.slider("Minimal CA", 0, 200, 120)
+    search_query = st.sidebar.text_input("Cari Pemain")
+
+    df_calc = df_raw.copy()
+    df_calc['Score'] = df_calc.apply(lambda r: calculate_role_score(r, selected_role), axis=1)
+    
+    res = df_calc[df_calc['CA'] >= min_ca].sort_values(by='Score', ascending=False)
+    
+    if search_query:
+        res = res[res['Name'].str.contains(search_query, case=False)]
+
+    st.subheader(f"Daftar Pemain Terbaik: {selected_role}")
+    st.dataframe(res[['Name', 'Position', 'Score', 'CA', 'PA', 'Cons']], use_container_width=True, hide_index=True)
+else:
+    st.error("Database tidak ditemukan!")
