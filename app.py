@@ -192,7 +192,7 @@ def calculate_role_score(row, role_name):
 
 # --- UI TAMPILAN ---
 st.title("🏆 FM24 Pro Role Calculator")
-st.markdown("Database: **Database v.30** | Filosofi: **Meta Versatile (x5, x3, x2)**")
+st.markdown("Database: **database** | Filosofi: **Meta Versatile (x5, x3, x2)**")
 
 if df_raw is not None:
     # Sidebar Filter
