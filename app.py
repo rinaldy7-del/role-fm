@@ -147,7 +147,7 @@ if df_raw is not None:
         use_container_width=True,
         hide_index=True,
         on_select="rerun",
-        selection_mode="single_row"
+        selection_mode="single-row"
     )
 
     # --- DETAIL ANALISIS PEMAIN (SAAT DIKLIK) ---
@@ -208,3 +208,4 @@ if df_raw is not None:
 
 else:
     st.error("File 'db.xlsx' tidak ditemukan di GitHub!")
+
